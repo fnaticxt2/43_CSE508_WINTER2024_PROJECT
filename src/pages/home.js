@@ -73,7 +73,7 @@ const Home = () => {
     const formData = new FormData();
     formData.append("resume", resumeFile);
 
-    fetch("http://your-server-endpoint/upload", {
+    fetch("http://127.0.0.1:8000/upload-resume", {
       method: "POST",
       body: formData,
     })
