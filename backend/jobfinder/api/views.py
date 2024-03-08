@@ -51,7 +51,8 @@ class UploadPDF(APIView):
                 top3_indices = heapq.nlargest(10, range(len(similarity_scores)), key=similarity_scores.__getitem__)
                 finaldata = []
                 for i in top3_indices:
-                    finaldata.append({"job": jobdata[i], "score": similarity_scores[i]})
+                    jobdata[i].append(similarity_scores[i])
+                    finaldata.append(jobdata[i])
                 
                 return JsonResponse({'data': finaldata}, status=200)
 
@@ -64,12 +65,8 @@ class UploadPDF(APIView):
 
 def process_csv(csv_file):
     data = []
-    # Read the CSV file
     reader = csv.reader(csv_file)
-    # Skip the header row if needed
     next(reader, None)
-    # Process each row
     for row in reader:
-        # Do something with each row, for example, append it to a list
         data.append(row)
     return data
