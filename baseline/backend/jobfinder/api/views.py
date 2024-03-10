@@ -39,6 +39,7 @@ class UploadPDF(APIView):
                 page = pdf_reader.pages[page_num] 
                 text += page.extract_text()
             text = text.replace("\n", " ")
+            print(text)
 
             user_resume_doc = nlp(text)
 
@@ -48,6 +49,7 @@ class UploadPDF(APIView):
                 job_descriptions = [row[7] for row in jobdata]
                 job_description_docs = [nlp(job_desc) for job_desc in job_descriptions]
                 similarity_scores = [user_resume_doc.similarity(job_desc) for job_desc in job_description_docs]
+                print(similarity_scores)
                 top3_indices = heapq.nlargest(10, range(len(similarity_scores)), key=similarity_scores.__getitem__)
                 finaldata = []
                 for i in top3_indices:
