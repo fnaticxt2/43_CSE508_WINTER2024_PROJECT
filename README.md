@@ -7,7 +7,7 @@ Many job opportunities go unseen by job seekers due to the overwhelming volume o
 
 Either clone or download the repository, and then run the following commands in the terminal from the base folder:
 
-###To run the Front-end:
+### To run the Front-end:
 
 ```bash
 npm install
@@ -20,7 +20,7 @@ npm start
 It runs the app in the development mode.
 Open http://localhost:3000 to view it in your browser.
 
-###To run Back-end:
+### To run Back-end:
 
 Open another terminal and type commands from the base folder: 
 
