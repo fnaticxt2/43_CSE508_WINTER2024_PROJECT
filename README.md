@@ -1,10 +1,9 @@
-# Getting Started with Create React App
+# JOB-SEEKING ASSISTANCE PORTAL BASED ON USER RESUME
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Many job opportunities go unseen by job seekers due to the overwhelming volume of job postings daily, many of which may not align with their specific skills and career aspirations. This also poses a challenge for recruiters, who need help attracting suitable applicants for their open positions, as their job postings do not effectively reach the intended audience. Consequently, this mismatch leads to an inefficient allocation of company resources and an unnecessary expenditure of time for both employers and job seekers. Searching for job opportunities that are tailored to an individual's professional profile becomes an Intensive task. Hence, we propose this portal which is a resume-based job ranking system which provides job-seeking assistance.
 
-## Available Scripts
-
-In the project directory, you can run:
+## How to run:
+Either clone or download the repository, and then run the following commands in the terminal:
 
 ### `npm start`
 
