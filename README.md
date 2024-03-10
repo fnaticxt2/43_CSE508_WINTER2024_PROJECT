@@ -5,7 +5,24 @@ Many job opportunities go unseen by job seekers due to the overwhelming volume o
 
 ## How to Run:
 
-Either clone or download the repository, and then run the following commands in the terminal from base folder:
+Either clone or download the repository, and then run the following commands in the terminal from the base folder:
+
+###To run the Front-end:
+
+```bash
+npm install
+```
+Start the server and Front-end:
+
+```bash
+npm start 
+```
+It runs the app in the development mode.
+Open http://localhost:3000 to view it in your browser.
+
+###To run Back-end:
+
+Open another terminal and type commands from the base folder: 
 
 ```bash
 cd baseline/backend/jobfinder
@@ -15,26 +32,10 @@ Install dependencies:
 
 ```bash
 pip install -r requirements.txt
-
-npm install
-```
-
-Start the server and front-end:
-
-```bash
-npm start 
-```
-Runs the app in the development mode.
-Open http://localhost:3000 to view it in your browser.
-
-Open another terminal and type commannds from base folder: 
-
-```bash
-cd baseline/backend/jobfinder
 ```
 Run backend server:
 ```bash
 python manage.py runserver
 ```
 
-You can now run the application on browser on http://localhost:3000
+You can now run the application on the browser.
