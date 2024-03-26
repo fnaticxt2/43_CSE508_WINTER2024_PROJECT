@@ -1,30 +1,20 @@
 from django.shortcuts import render
 import PyPDF2
-
-# Create your views here.
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.http import JsonResponse
-import pytesseract
-from PIL import Image
 import csv
-from django.shortcuts import render
-from django import forms
-import spacy
 import os
 import heapq
+from rank_bm25 import BM25Okapi
+import string
+from nltk.corpus import stopwords
 
-nlp = spacy.load("en_core_web_md")
-
-class UploadCSVForm(forms.Form):
-    csv_file = forms.FileField()
-    
 class UploadPDF(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, format=None):
-
         csv_file_path = os.path.join(os.path.dirname(__file__), '08-03-2023.csv')
 
         if not request.FILES.get('resume'):
@@ -36,39 +26,51 @@ class UploadPDF(APIView):
             pdf_reader = PyPDF2.PdfReader(pdf_file)
             text = ''
             for page_num in range(len(pdf_reader.pages)):
-                page = pdf_reader.pages[page_num] 
+                page = pdf_reader.pages[page_num]
                 text += page.extract_text()
             text = text.replace("\n", " ")
-            print(text)
-
-            user_resume_doc = nlp(text)
 
             with open(csv_file_path, 'r', newline='', encoding='utf-8') as file:
                 reader = csv.reader(file)
                 jobdata = list(reader)
                 job_descriptions = [row[7] for row in jobdata]
-                job_description_docs = [nlp(job_desc) for job_desc in job_descriptions]
-                similarity_scores = [user_resume_doc.similarity(job_desc) for job_desc in job_description_docs]
-                print(similarity_scores)
-                top3_indices = heapq.nlargest(10, range(len(similarity_scores)), key=similarity_scores.__getitem__)
+                
+                # Preprocess job descriptions
+                processed_job_descriptions = []
+                for desc in job_descriptions:
+                    processed_desc = self.preprocess_text(desc)
+                    processed_job_descriptions.append(processed_desc)
+                
+                # Tokenize the processed job descriptions
+                tokenized_job_descriptions = [desc.split() for desc in processed_job_descriptions]
+                
+                # Create BM25 object
+                bm25 = BM25Okapi(tokenized_job_descriptions)
+                
+                # Tokenize user resume and remove stopwords, punctuations, and specified characters
+                processed_resume = self.preprocess_text(text)
+                tokenized_resume = processed_resume.split()
+                print(tokenized_resume)
+                # Get BM25 scores
+                bm25_scores = bm25.get_scores(tokenized_resume)
+                print(bm25_scores)
+                # Get indices of top 10 scores
+                top10_indices = heapq.nlargest(10, range(len(bm25_scores)), key=bm25_scores.__getitem__)
+                
                 finaldata = []
-                for i in top3_indices:
-                    jobdata[i].append(similarity_scores[i])
+                for i in top10_indices:
+                    jobdata[i].append(bm25_scores[i])
                     finaldata.append(jobdata[i])
                 
                 return JsonResponse({'data': finaldata}, status=200)
 
-            entities = [{'text': ent.text, 'label': ent.label_} for ent in doc.ents]
-            return JsonResponse({'entities': entities})
-        
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-            
 
-def process_csv(csv_file):
-    data = []
-    reader = csv.reader(csv_file)
-    next(reader, None)
-    for row in reader:
-        data.append(row)
-    return data
+    def preprocess_text(self, text):
+        # Remove stopwords, punctuations, and specified characters
+        stop_words = set(stopwords.words('english'))
+        punctuation_chars = set(string.punctuation)
+        specified_chars = {'.', ';',':','-'," "}
+        processed_text = ' '.join([word.lower() for word in text.split() if word.lower() not in stop_words and word.lower() not in punctuation_chars and word.lower() not in specified_chars])
+        return processed_text
