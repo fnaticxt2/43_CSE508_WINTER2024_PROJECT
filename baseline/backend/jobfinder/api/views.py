@@ -54,14 +54,14 @@ class UploadPDF(APIView):
                 print(json_data)
                 for key, value in json_data.items():
                     print(key)
-                    resume_string += key + ": "
+                    #resume_string += key + ": "
                     if value:
-                        value_str = ", ".join(value)
-                        resume_string += value_str+". "
+                        value_str = " ".join(value)
+                        resume_string += value_str+" , "
             else:
                 print("JSON object not found in the provided string.")
                 return JsonResponse({'error': "Object not found in the provided string."}, status=400)
-
+            print("\n\n"+resume_string+"\n\n")
             with open(csv_file_path, 'r', newline='', encoding='utf-8') as file:
                 reader = csv.reader(file)
                 jobdata = list(reader)
