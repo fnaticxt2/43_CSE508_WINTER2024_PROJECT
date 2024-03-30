@@ -8,6 +8,7 @@ const JobList = () => {
   useEffect(() => {
     if (location.state && location.state.jobdata) {
       const jobData = location.state.jobdata;
+      console.log(jobData);
       setJobs(jobData);
       console.log(jobData);
     }
@@ -21,11 +22,12 @@ const JobList = () => {
             
         {jobs.map((job) => (
           <div key={job[0]}>
+          {console.log(job)}
           <a href={job[8]} target='_BLANK' className="col-md-12 mb-3" style={{color:"#000",textDecoration:'none'}}>
             <div className="card">
               <div className="card-body">
-                <h5 className="card-title">{job[3]}, {job[4]}</h5>
-                <p className="card-text">{job[2]}, Matching: {(job[9]*100).toFixed(2)}%</p>
+                <h5 className="card-title">{ job[3] ? ( <>{job[3]} ,</> ):( <></> )} {job[4]}</h5>
+                <p className="card-text">{job[1]}, {job[2]}</p>
               </div>
             </div>
           </a>
