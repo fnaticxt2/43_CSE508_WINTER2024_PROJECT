@@ -13,9 +13,8 @@ if ($conn->connect_error) {
 }
 
 
-$stmt = $conn->prepare("INSERT INTO jobs SET job_id=?, company_id=?, jd_url=?, skills=?, job_description=?, extra_data=?, title=?, company_name=?, posted_on=?, platform=?");
+$stmt = $conn->prepare("INSERT INTO jobs SET job_id=?, company_id=?, jd_url=?, skills=?, job_description=?, extra_data=?, title=?, company_name=?, posted_on=?, platform=?, processed_text=?");
 
-$curl = curl_init();
 $perPage = 100;
 $locations = array("mumbai","delhi","pune","banglore");
 $labels = array("Software Developer","Web Developer","Data Analyst","Systems Analyst","Network Engineer","Database Administrator","Quality Assurance (QA) Engineer","IT Support Engineer","Cybersecurity Analyst","Machine Learning Engineer","Cloud Engineer","DevOps Engineer","IT Project Manager","UI/UX Designer","Mobile App Developer");
@@ -31,9 +30,11 @@ $yesterdayStamp = strtotime($yesterdayDate);
 while(true){
     $allJobs = array();
 
+    $url = "https://www.naukri.com/jobapi/v3/search?noOfResults={$perPage}&urlType=search_by_key_loc&searchType=adv&location={$location_str}&keyword={$labels_str}&sort=f&src=sortby&pageNo={$pageNo}&k={$labels_str}&l={$location_str}&nignbevent_src=jobsearchDeskGNB&jobAge=1&latLong={$lat}_{$Long}";
 
+    $curl = curl_init();
     curl_setopt_array($curl, array(
-        CURLOPT_URL => "https://www.naukri.com/jobapi/v3/search?noOfResults={$perPage}&urlType=search_by_key_loc&searchType=adv&location={$location_str}&keyword={$labels_str}&sort=f&pageNo={$pageNo}&k={$labels_str}&l={$location_str}&nignbevent_src=jobsearchDeskGNB&src=jobsearchDesk&latLong={$lat}_{$Long}",
+        CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_ENCODING => '',
         CURLOPT_MAXREDIRS => 10,
@@ -65,9 +66,6 @@ while(true){
             $created_on = strtotime(date("Y-m-d", intval($timestamp / 1000)));
             if ($yesterdayStamp <= $created_on) {
                 $allJobs[] = $jobDetail;
-            }else{
-                $isExit = true;
-                break;
             }
         }
     }
@@ -103,19 +101,24 @@ while(true){
             $extra_data = $conn->real_escape_string($extra_data);
             $title = $conn->real_escape_string($title);
             $company_name = $conn->real_escape_string($company_name);
+
+            $processed_text = preprocessText($skills." ".$job_description." ".$extra_data);
+
+
             $platform = "naukri";
-            $stmt->bind_param("ssssssssss", $job_id, $company_id, $jd_url, $skills, $job_description, $extra_data, $title, $company_name, $posted_on, $platform);
+            $stmt->bind_param("sssssssssss", $job_id, $company_id, $jd_url, $skills, $job_description, $extra_data, $title, $company_name, $posted_on, $platform, $processed_text);
 
             try {
                 $result = $stmt->execute();
                 if ($result === false) {
-                    die("Error executing statement: " . $stmt->error);
                 }
             } catch (mysqli_sql_exception $e) {
-                if ($e->getCode() == 1062) { 
-               //     echo "Error: Duplicate entry. The record already exists.";
+                
+                $error_code = $stmt->errno;
+                if ($error_code == 1062) { 
+                    continue;
                 } else {
-                    echo "Error executing statement: " . $e->getMessage();
+                    echo "Error executing statement: " . $e->getMessage()." Code: ".$stmt->errno;
                     exit();
                 }
             }
@@ -124,9 +127,35 @@ while(true){
     if($totalRetrived >= $noOfJobs || $isExit){
         break;
     }
+    echo " Page No: ".$pageNo.", totalRetrived: ".$totalRetrived.", noOfJobs: ".$noOfJobs."<br>";
     $pageNo++;
-//    echo " Page No: ".$pageNo." ";
+    sleep(2);
 }
 $stmt->close();
 $conn->close();
+
+
+
+
+
+function preprocessText($text) {
+    // Define stopwords, punctuation characters, and specified characters
+    $stopWords = array("i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now");
+    $punctuationChars = array(".", ",", ";", ":", "-", "!", "?", "\"", "'", "(", ")", "[", "]", "{", "}", "/", "\\", "|", "@", "#", "$", "%", "^", "&", "*", "_", "+", "=", "~", "`");
+    $specifiedChars = array(".", ";", ":", "-", " ");
+
+    // Remove stopwords, punctuations, and specified characters
+    $processedText = "";
+    $words = explode(" ", $text);
+    foreach ($words as $word) {
+        $word = strtolower($word);
+        if (!in_array($word, $stopWords) && !in_array($word, $punctuationChars) && !in_array($word, $specifiedChars)) {
+            $processedText .= trim($word) . " ";
+        }
+    }
+    $processedText = trim($processedText);
+    $processedText = strip_tags($processedText);
+    $processedText = preg_replace('/<br\s*\/?>/', ' ', $processedText);
+    return $processedText;
+}
 

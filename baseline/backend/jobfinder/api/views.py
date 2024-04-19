@@ -13,12 +13,14 @@ from nltk.corpus import stopwords
 import requests
 import re 
 import json 
+from django.db import connection
+import time
 
 class UploadPDF(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, format=None):
-        csv_file_path = os.path.join(os.path.dirname(__file__), '08-03-2023.csv')
+#        csv_file_path = os.path.join(os.path.dirname(__file__), '08-03-2023.csv')
 
         if not request.FILES.get('resume'):
             return JsonResponse({'error': 'No file attached'}, status=400)
@@ -62,22 +64,26 @@ class UploadPDF(APIView):
                 print("JSON object not found in the provided string.")
                 return JsonResponse({'error': "Object not found in the provided string."}, status=400)
             print("\n\n"+resume_string+"\n\n")
-            with open(csv_file_path, 'r', newline='', encoding='utf-8') as file:
-                reader = csv.reader(file)
-                jobdata = list(reader)
-                job_descriptions = [row[7] for row in jobdata]
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM jobs")
+                jobdata = cursor.fetchall()
+                job_descriptions = [row[12] for row in jobdata]
                 
                 # Preprocess job descriptions
                 processed_job_descriptions = []
                 for desc in job_descriptions:
-                    processed_desc = self.preprocess_text(desc)
-                    processed_job_descriptions.append(processed_desc)
+                    processed_job_descriptions.append(desc)
                 
                 # Tokenize the processed job descriptions
                 tokenized_job_descriptions = [desc.split() for desc in processed_job_descriptions]
-                
+                start_time = time.time()
                 # Create BM25 object
                 bm25 = BM25Okapi(tokenized_job_descriptions)
+                end_time = time.time()
+
+                execution_time = end_time - start_time
+
+                print("BM25Okapi constructor took {:.2f} seconds to execute.".format(execution_time))
                 
                 # Tokenize user resume and remove stopwords, punctuations, and specified characters
                 processed_resume = self.preprocess_text(resume_string)
@@ -93,8 +99,9 @@ class UploadPDF(APIView):
                 finaldata = []
                 for i in top10_indices:
                     print(jobdata[i])
-                    jobdata[i].append(bm25_scores[i])
-                    finaldata.append(jobdata[i])
+                    jobrow = list(jobdata[i])
+                    jobrow.append(bm25_scores[i])
+                    finaldata.append(jobrow)
                 print(finaldata)
                 
                 return JsonResponse({'data': finaldata}, status=200)
