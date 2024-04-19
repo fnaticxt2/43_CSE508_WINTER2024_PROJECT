@@ -118,7 +118,7 @@ while(true){
                 if ($error_code == 1062) { 
                     continue;
                 } else {
-                    echo "Error executing statement: " . $e->getMessage()." Code: ".$stmt->errno;
+                    echo "Error during executing statement: " . $e->getMessage()." Code: ".$stmt->errno;
                     exit();
                 }
             }
@@ -127,7 +127,7 @@ while(true){
     if($totalRetrived >= $noOfJobs || $isExit){
         break;
     }
-    echo " Page No: ".$pageNo.", totalRetrived: ".$totalRetrived.", noOfJobs: ".$noOfJobs."<br>";
+    echo " Page No: ".$pageNo.", TotalRetrived: ".$totalRetrived.", NoOfJobs: ".$noOfJobs."<br>";
     $pageNo++;
     sleep(2);
 }
