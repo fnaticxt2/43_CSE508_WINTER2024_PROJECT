@@ -16,7 +16,7 @@ if ($conn->connect_error) {
 $stmt = $conn->prepare("INSERT INTO jobs SET job_id=?, company_id=?, jd_url=?, skills=?, job_description=?, extra_data=?, title=?, company_name=?, posted_on=?, platform=?, processed_text=?");
 
 $perPage = 100;
-$locations = array("mumbai","delhi","pune","banglore");
+$locations = array("mumbai","delhi","pune","banglore","indore","chennai","nagpur","bhopal");
 $labels = array("Software Developer","Web Developer","Data Analyst","Systems Analyst","Network Engineer","Database Administrator","Quality Assurance (QA) Engineer","IT Support Engineer","Cybersecurity Analyst","Machine Learning Engineer","Cloud Engineer","DevOps Engineer","IT Project Manager","UI/UX Designer","Mobile App Developer");
 $location_str = http_build_query($locations, '', ',');
 $labels_str = http_build_query($labels, '', ',');
