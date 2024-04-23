@@ -14,7 +14,14 @@ const JobList = () => {
       console.log(jobData);
     }
   }, [location]);
-  
+  function truncateStringUntilWord(str, word) {
+    var index = str.indexOf(word);
+    
+    if (index !== -1) {
+        return str.substring(index, str.length);
+    }
+    return str;
+  }
   return (
     <div className="container mt-4">
       <h2 className="text-center mb-4">Jobs</h2>
@@ -45,7 +52,7 @@ const JobList = () => {
             <div className="card">
               <div className="card-body">
                 <h5 className="card-title">{ job[7] ? ( <>{job[7]} ,</> ):( <></> )} {job[8]}</h5>
-                <p className="card-text">{job[6]}<br/>Posted on: {formattedDate}</p>
+                <p className="card-text" style={{textTransform:"capitalize"}}>{truncateStringUntilWord(job[6],"salary")}<br/>Posted on: {formattedDate}</p>
               </div>
             </div>
           </a>

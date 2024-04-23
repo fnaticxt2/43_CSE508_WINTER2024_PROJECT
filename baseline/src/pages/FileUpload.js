@@ -34,9 +34,8 @@ const FileUpload = () => {
       alert("Please select a file.");
       return;
     }
-
     const formData = new FormData();
-    formData.append("selectedOptions", selectedOptions);
+    formData.append("selectedOptions", selectedOptions.join(","));
     formData.append("resume", selectedFile);
 
     setLoadingApp(true);
