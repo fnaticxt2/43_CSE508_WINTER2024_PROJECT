@@ -45,8 +45,11 @@ class UploadPDF(APIView):
 
         if not request.FILES.get('resume'):
             return JsonResponse({'error': 'No file attached'}, status=400)
-
+        
         pdf_file = request.FILES['resume']
+
+        if not (pdf_file.content_type == 'application/pdf' or pdf_file.name.lower().endswith('.pdf')):
+            return JsonResponse({'error': 'The resume file is not a PDF'}, status=400)
         selectedOptions = request.POST['selectedOptions']
         print("---------")
         print(selectedOptions)
@@ -75,6 +78,9 @@ class UploadPDF(APIView):
             for page_num in range(len(pdf_reader.pages)):
                 page = pdf_reader.pages[page_num]
                 text += page.extract_text()
+            
+            if not text:
+                return JsonResponse({'error': 'Invalid PDF upload text based pdf resume'}, status=400)
             text = text.replace("\n", " ")
             iteration = 1
             while iteration <= 10:
@@ -83,6 +89,10 @@ class UploadPDF(APIView):
                 iteration = iteration + 1
                 if token_raw:
                     break
+                time.sleep(2)
+            if not token_raw:
+                return JsonResponse({'error': "Resume unable to read"}, status=400)
+                
             print(token_raw)
             tokens_str = token_raw["choices"][0]["message"]["content"]
 #            print(tokens_str)
@@ -104,7 +114,6 @@ class UploadPDF(APIView):
             json_data["past_experience"] = newJob_exp
             print("after----------------")
             print(json_data)
-            print("loop1")
             print(prefrence)
             if prefrence:
                 for pref in prefrence:
@@ -113,10 +122,8 @@ class UploadPDF(APIView):
                     print(pref_text)
                     final_resume_str[pref] = pref_text
             
-            print("loop2")
             resume_string=""
             for key, value in json_data.items():
-                print("loop3")
                 if key not in final_resume_str:
                     if value:
                         value_str = " ".join(value)
@@ -141,13 +148,10 @@ class UploadPDF(APIView):
                 bm25_scores_list = {}
                 for pref_key, pref_val in final_resume_str.items():
                     bm25_scores = bm25.get_scores(self.preprocess_text_pipeline(pref_val))
-                    """
                     multipler = prefrence_mapping[pref_key]
                     print(pref_key)
                     for i in range(len(bm25_scores)):
                         bm25_scores[i] *= multipler
-                    bm25_scores_list[pref_key] = bm25_scores
-                    """
                     bm25_scores_list[pref_key] = bm25_scores
                     print(len(bm25_scores))
                 
@@ -202,7 +206,7 @@ class UploadPDF(APIView):
         api_request_json = {
             "model": "llama3-70b",
             "messages": [
-                {"role": "user", "content": text+" Extract tokens, form this resume text that should follow the format. 1) Atmost 20 and atleast 2 tokens for primary skills. 2) Atmost 8 tokens secondary skill. 3) Atmost 6 and atleast 1 educational background degree and college. 4) Atmost 2 past job experience in years in format 'job experence [insert year]', if not mentioned then give '0' and 'fresher' two tokens. 5) Atleast 2 and Atmost 5 soft skills. 6) Atmost 2 location token of candidate city. 7) Atmost 5 token for hobbies. 8) Atmost 4 tokens for explaining the users personality or uniqueness. Response Format: {'primary_skills': ['Token 1','Token 2',..],'secondary_skills': ['Token 3','Token 4',..],'latest_education': ['Token 5'], 'past_experience': ['Token 6',...],'soft_skills': ['Token 7',...],'location': ['Token 8',...],'hobbies': ['Token 9',...],  'personality_uniqueness': ['Token 10',...]}. Note: if the tokens do not exist then return None this should be returned in a non changeable json format for sake of uniformity, so any more resume text that i give should be returned in this format only. And most important Just send JSON data in response no other text. Just give JSON response in pain text no object and no other text"},
+                {"role": "user", "content": text+" Extract tokens, form this resume text that should follow the format. 1) Atmost 20 and atleast 2 tokens for primary skills. 2) Atmost 8 tokens secondary skill. 3) Atmost 6 and atleast 1 educational background degree and college. 4) Atmost 2 past job experience in years in format 'job experience [insert year]', if not mentioned then give '0' and 'fresher' two tokens. 5) Atleast 2 and Atmost 5 soft skills. 6) Atmost 2 location token of candidate city. 7) Atmost 5 token for hobbies. 8) Atmost 4 tokens for explaining the users personality or uniqueness. Response Format: {'primary_skills': ['Token 1','Token 2',..],'secondary_skills': ['Token 3','Token 4',..],'latest_education': ['Token 5'], 'past_experience': ['Token 6',...],'soft_skills': ['Token 7',...],'location': ['Token 8',...],'hobbies': ['Token 9',...],  'personality_uniqueness': ['Token 10',...]}. Note: if the tokens do not exist then return None this should be returned in a non changeable json format for sake of uniformity, so any more resume text that i give should be returned in this format only. And most important Just send JSON data in response no other text. Just give JSON response in pain text no object and no other text. Don't give None insted give blank str '' token"},
             ]
         }
         try:
