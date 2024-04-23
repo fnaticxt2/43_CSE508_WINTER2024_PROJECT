@@ -22,8 +22,11 @@ from nltk.stem import WordNetLemmatizer
 from bs4 import BeautifulSoup
 from nltk.tokenize import word_tokenize
 from llamaapi import LlamaAPI
+from decouple import config
 
 lemmatizer = WordNetLemmatizer()
+
+
 
 class UploadPDF(APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -71,19 +74,6 @@ class UploadPDF(APIView):
                     value_str = " ".join(value)
                     resume_string += value_str+" , "
             print(resume_string)
-            """
-            if match:
-                json_data_str = match.group()
-                json_data = json.loads(json_data_str)
-                for key, value in json_data.items():
-                    if value:
-                        value_str = " ".join(value)
-                        resume_string += value_str+" , "
-            else:
-                print("JSON object not found in the provided string.")
-                return JsonResponse({'error': "Object not found in the provided string."}, status=400)
-                
-            """
             with connection.cursor() as cursor:
                 sql_query = "SELECT * FROM jobs WHERE DATE(posted_on) IN ({}) ORDER BY posted_on DESC".format(', '.join(['%s'] * len(date_list)))
                 cursor.execute(sql_query, date_list)
@@ -98,7 +88,12 @@ class UploadPDF(APIView):
                 
                 tokenized_resume = self.preprocess_text_pipeline(resume_string)
                 #tokenized_resume = processed_resume.split()
+                start_time = time.time()
                 bm25_scores = bm25.get_scores(tokenized_resume)
+                end_time = time.time()
+                execution_time = end_time - start_time
+                print("bm25_scores took {:.2f} seconds to execute.".format(execution_time))
+                print(bm25_scores)
                 top10_indices = heapq.nlargest(10, range(len(bm25_scores)), key=bm25_scores.__getitem__)
                 
                 print(top10_indices)
@@ -123,7 +118,7 @@ class UploadPDF(APIView):
         return processed_text
   
     def llm_api_request(self, text):
-        llama = LlamaAPI('LL-oanhxM5VqtkyRqeSwAJnUbitkD0Psq6KPBy0VLsLATxm84d2KHU7tAjy5XtMzdVL')
+        llama = LlamaAPI(config('API_KEY'))
         api_request_json = {
             "model": "llama3-70b",
             "messages": [
@@ -133,37 +128,6 @@ class UploadPDF(APIView):
         response = llama.run(api_request_json)
         return response.json()
 
-
-        """
-        api_url = 'https://api.deepinfra.com/v1/inference/mistralai/Mixtral-8x7B-Instruct-v0.1'
-        data = {
-            "input": "[INST] "+text+" Extract skill tokens, form this resume text that should follow the format. 1) Atmost 20 and atleast 2 tokens for primary skills. 2) Atmost 8 tokens secondary skill. 3) Atmost 6 and atleast 1 educational background degree and college. 4) Atmost 6 latest sentences for past experience. 5) Atleast 2 and Atmost 5 soft skills. 6) Atmost 2 location token of candidate city. 7) Atmost 5 token for hobbies. 8) Atmost 4 tokens for explaining the users personality or uniqueness. Response Format: {'primary_skills': ['Token 1','Token 2',..],'secondary_skills': ['Token 3','Token 4',..],'latest_education': ['Token 5'], 'past_experience': ['Token 6',...],'soft_skills': ['Token 7',...],'location': ['Token 8',...],'hobbies': ['Token 9',...],  'personality_uniqueness': ['Token 10',...]}. Note: if the tokens do not exist then return None this should be returned in a non changeable json format for sake of uniformity, so any more resume text that i give should be returned in this format only. And most important Just send JSON data in response no other text. Just give JSON response in pain text no object and no other text [/INST] "
-        }
-
-        # Headers to be included in the request
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer eAYc9lZHAZfnRcngYxSRnx18nMrabzJk'
-            # Add any other headers as needed
-        }
-
-        try:
-            # Making a POST request to the API endpoint with headers
-            response = requests.post(api_url, json=data, headers=headers)
-
-            # Checking if the request was successful (status code 200)
-            if response.status_code == 200:
-                print(response.json())
-                return response.json()
-            else:
-                return False
-                print(f"Request failed with status code: {response.status_code}")
-
-        except requests.exceptions.RequestException as e:
-            return False
-            # Handle exceptions if the request fails
-            print(f"Request failed: {e}")
-        """
     
     def lowercase_text(self, text):
         return text.lower()
