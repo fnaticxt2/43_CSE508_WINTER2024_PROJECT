@@ -13,6 +13,11 @@ const FileUpload = () => {
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [resumePreviewUrl, setResumePreviewUrl] = useState(null);
 
+  const [selectedOptions, setSelectedOptions] = useState([]);
+  const handleSelectChange = (event) => {
+    const selectedValues = Array.from(event.target.selectedOptions, option => option.value);
+    setSelectedOptions(selectedValues);
+  };
   const onDrop = useCallback(acceptedFiles => {
     setSelectedFile(acceptedFiles[0]);
     setResumePreviewUrl(URL.createObjectURL(acceptedFiles[0])); // Generate preview URL for PDF
@@ -27,8 +32,9 @@ const FileUpload = () => {
     }
 
     const formData = new FormData();
+    formData.append("selectedOptions", selectedOptions);
     formData.append("resume", selectedFile);
-
+    
     setLoadingApp(true);
     setUploadProgress(0); // Reset progress initially
 
@@ -95,6 +101,16 @@ const FileUpload = () => {
                       </div>
                     )}
                   </div>
+                  <h2>Select your options:</h2>
+                  <select multiple className="form-select" value={selectedOptions} onChange={handleSelectChange}>
+        <option value="primary_skills" selected>Primary Skills</option>
+        <option value="secondary_skills">Secondary Skills</option>
+        <option value="latest_education">Latest Education</option>
+        <option value="past_experience">Past Experience</option>
+        <option value="soft_skills">Soft Skills</option>
+        <option value="location">Location</option>
+        <option value="hobbies">Hobbies</option>
+      </select>
                   {loadingApp && (
                     <div style={{ marginTop: '20px' }}>
                       <p>Uploading: {uploadProgress}%</p>
