@@ -61,7 +61,13 @@ class UploadPDF(APIView):
                 text += page.extract_text()
                 text += page.extract_text()
             text = text.replace("\n", " ")
-            token_raw = self.llm_api_request(text)
+            iteration = 1
+            while iteration <= 10:
+                print("Trying request "+str(iteration))
+                token_raw = self.llm_api_request(text)
+                iteration = iteration + 1
+                if token_raw:
+                    break
             print(token_raw)
             tokens_str = token_raw["choices"][0]["message"]["content"]
             print(tokens_str)
@@ -125,8 +131,14 @@ class UploadPDF(APIView):
                 {"role": "user", "content": text+" Extract skill tokens, form this resume text that should follow the format. 1) Atmost 20 and atleast 2 tokens for primary skills. 2) Atmost 8 tokens secondary skill. 3) Atmost 6 and atleast 1 educational background degree and college. 4) Atmost 6 latest sentences for past experience. 5) Atleast 2 and Atmost 5 soft skills. 6) Atmost 2 location token of candidate city. 7) Atmost 5 token for hobbies. 8) Atmost 4 tokens for explaining the users personality or uniqueness. Response Format: {'primary_skills': ['Token 1','Token 2',..],'secondary_skills': ['Token 3','Token 4',..],'latest_education': ['Token 5'], 'past_experience': ['Token 6',...],'soft_skills': ['Token 7',...],'location': ['Token 8',...],'hobbies': ['Token 9',...],  'personality_uniqueness': ['Token 10',...]}. Note: if the tokens do not exist then return None this should be returned in a non changeable json format for sake of uniformity, so any more resume text that i give should be returned in this format only. And most important Just send JSON data in response no other text. Just give JSON response in pain text no object and no other text"},
             ]
         }
-        response = llama.run(api_request_json)
-        return response.json()
+        try:
+            response = llama.run(api_request_json)
+            print(response.json())
+            return response.json()
+        except Exception as e:
+            print("An error occurred:", e)
+        
+        return False
 
     
     def lowercase_text(self, text):
