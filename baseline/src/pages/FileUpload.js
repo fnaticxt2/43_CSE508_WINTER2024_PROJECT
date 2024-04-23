@@ -1,9 +1,8 @@
 import React, { useState, useCallback } from "react";
 import { useHistory } from "react-router-dom";
-import { Link } from "react-router-dom";
-import { useDropzone } from 'react-dropzone'
+import { useDropzone } from 'react-dropzone';
 import { Hourglass } from 'react-loader-spinner';
-//import backgroundImage from '../assets/images/download.jpg';
+import background from '../assets/image/download-modified.jpg'; // Assuming the correct path to your image
 
 const FileUpload = () => {
   const history = useHistory();
@@ -12,12 +11,17 @@ const FileUpload = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [resumePreviewUrl, setResumePreviewUrl] = useState(null);
-
   const [selectedOptions, setSelectedOptions] = useState([]);
-  const handleSelectChange = (event) => {
-    const selectedValues = Array.from(event.target.selectedOptions, option => option.value);
-    setSelectedOptions(selectedValues);
+
+  const handleCheckboxChange = (event) => {
+    const { value, checked } = event.target;
+    if (checked) {
+      setSelectedOptions([...selectedOptions, value]);
+    } else {
+      setSelectedOptions(selectedOptions.filter(option => option !== value));
+    }
   };
+
   const onDrop = useCallback(acceptedFiles => {
     setSelectedFile(acceptedFiles[0]);
     setResumePreviewUrl(URL.createObjectURL(acceptedFiles[0])); // Generate preview URL for PDF
@@ -34,7 +38,7 @@ const FileUpload = () => {
     const formData = new FormData();
     formData.append("selectedOptions", selectedOptions);
     formData.append("resume", selectedFile);
-    
+
     setLoadingApp(true);
     setUploadProgress(0); // Reset progress initially
 
@@ -46,7 +50,12 @@ const FileUpload = () => {
         setUploadProgress(progress);
       },
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
       .then((data) => {
         console.log("Upload successful:", data);
         setLoadingApp(false);
@@ -56,28 +65,27 @@ const FileUpload = () => {
       .catch((error) => {
         console.error("Error uploading file:", error);
         alert("Error uploading file. Please try again.");
+        setLoadingApp(false); // Reset loading state on error
       });
   };
 
-
   return (
     <>
-      <div className="background-container" style={{ backgroundSize: 'cover', minHeight: '100vh' }}>
-        <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
-          <div className="container-fluid text-center justify-content-center align-items-center" style={{ backgroundColor: '#f8f8f8' }}>
-          <h3 className="navbar-brand text-center" to="/" style={{ animation: 'rainbow-text-animation 5s infinite' }}>
+      <div className="background-container" style={{ backgroundSize: 'cover', minHeight: '100vh', padding: '0px', backgroundImage: `url(${background})`,opacity: 20 }}>
+        <nav className="navbar navbar-expand-lg navbar-dark bg-primary" style={{ marginBottom: '20px' }}>
+          <div className="container-fluid text-center justify-content-center align-items-center">
+            <h3 className="navbar-brand text-center" to="/" style={{ animation: 'rainbow-text-animation 5s infinite', fontSize: '24px' }}>
               Job Crawler
-          </h3>
+            </h3>
           </div>
         </nav>
-        <div className="container mt-4">
-          <div className="row">
-            <div className="col-md-6 offset-md-3">
-              <div className="card">
+        <div className="container">
+          <div className="row justify-content-center">
+            <div className="col-md-8">
+              <div className="card shadow">
                 <div className="card-body">
-                  <h5 className="card-title">Upload Resume</h5>
-                  <p className="card-text">Drag and drop your resume file here, or click to browse.</p>
-                  <div {...getRootProps()} style={{ flex: 1, width: "100%", height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgb(219, 219, 219)', border: '2px dashed rgb(172, 172, 172)', color: 'rgb(119, 119, 119)', padding: '20px' }}>
+                  <h3 className="card-title"  >Upload Resume</h3>
+                  <div {...getRootProps()} style={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgb(240, 240, 240)', border: '2px dashed rgb(172, 172, 172)', color: 'rgb(80, 80, 80)', padding: '20px', borderRadius: '8px' }}>
                     <input {...getInputProps()} />
                     {
                       isDragActive ?
@@ -85,52 +93,69 @@ const FileUpload = () => {
                         <p>Drag and drop your resume file here, or click to browse.</p>
                     }
                   </div>
-                  <div className="mt-3">
+                  <div className="mt-3 text-center">
                     <button className="btn btn-primary" onClick={() => document.getElementById('file-input').click()}>Browse</button>
                     <input type="file" id="file-input" className="d-none" onChange={(e) => {
                       setSelectedFile(e.target.files[0]);
                       setResumePreviewUrl(URL.createObjectURL(e.target.files[0]));
                     }} />
                     {selectedFile && (
-                      <div>
-                        <p>Selected file: {selectedFile.name}</p>
-                        <div className="resume-preview-container">
-                          <iframe src={resumePreviewUrl} className="resume-preview" title="Resume Preview" />
-                        </div>
-                        <button className="btn btn-primary" onClick={handleUpload}>Submit</button>
+                      <div className="mt-3">
+                        <p className="text-center">Selected file: {selectedFile.name}</p>
+                        <button className="btn btn-primary" onClick={handleUpload} style={{ backgroundColor: '#28a745', borderColor: '#28a745' }}>Submit</button>
                       </div>
                     )}
                   </div>
-                  <h2>Select your options:</h2>
-                  <select multiple className="form-select" value={selectedOptions} onChange={handleSelectChange}>
-        <option value="primary_skills" selected>Primary Skills</option>
-        <option value="secondary_skills">Secondary Skills</option>
-        <option value="latest_education">Latest Education</option>
-        <option value="past_experience">Past Experience</option>
-        <option value="soft_skills">Soft Skills</option>
-        <option value="location">Location</option>
-        <option value="hobbies">Hobbies</option>
-      </select>
-                  {loadingApp && (
-                    <div style={{ marginTop: '20px' }}>
-                      <p>Uploading: {uploadProgress}%</p>
-                      <div className="progress">
-                        <div className="progress-bar" role="progressbar" style={{ width: `${uploadProgress}%` }} aria-valuenow={uploadProgress} aria-valuemin="0" aria-valuemax="100"></div>
-                      </div>
-                      <p>Uploaded File: {uploadedFileName}</p>
-                      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                        <Hourglass
-                          visible={true}
-                          height="80"
-                          width="80"
-                          ariaLabel="hourglass-loading"
-                          wrapperStyle={{}}
-                          wrapperClass=""
-                          colors={['#000', '#444']}
-                        />
-                      </div>
+                  <div className="mt-4">
+                    <h3>Select your options:</h3>
+                    <div className="form-check">
+                        <input type="checkbox" id="primary_skills" value="primary_skills" className="form-check-input" onChange={handleCheckboxChange} checked={selectedOptions.includes('primary_skills')} />
+                        <label htmlFor="primary_skills" className="form-check-label">Primary Skills</label>
                     </div>
-                  )}
+                    <div className="form-check">
+                      <input type="checkbox" id="secondary_skills" value="secondary_skills" className="form-check-input" onChange={handleCheckboxChange} checked={selectedOptions.includes('secondary_skills')} />
+                      <label htmlFor="secondary_skills" className="form-check-label">Secondary Skills</label>
+                    </div>
+                    <div className="form-check">
+                      <input type="checkbox" id="latest_education" value="latest_education" className="form-check-input" onChange={handleCheckboxChange} checked={selectedOptions.includes('latest_education')} />
+                      <label htmlFor="latest_education" className="form-check-label">Latest Education</label>
+                    </div>
+                    <div className="form-check">
+                      <input type="checkbox" id="past_experience" value="past_experience" className="form-check-input" onChange={handleCheckboxChange} checked={selectedOptions.includes('past_experience')} />
+                      <label htmlFor="past_experience" className="form-check-label">Past Experience</label>
+                    </div>
+                    <div className="form-check">
+                      <input type="checkbox" id="soft_skills" value="soft_skills" className="form-check-input" onChange={handleCheckboxChange} checked={selectedOptions.includes('soft_skills')} />
+                      <label htmlFor="soft_skills" className="form-check-label">Soft Skills</label>
+                    </div>
+                    <div className="form-check">
+                      <input type="checkbox" id="location" value="location" className="form-check-input" onChange={handleCheckboxChange} checked={selectedOptions.includes('location')} />
+                      <label htmlFor="location" className="form-check-label">Location</label>
+                    </div>
+                    <div className="form-check">
+                      <input type="checkbox" id="hobbies" value="hobbies" className="form-check-input" onChange={handleCheckboxChange} checked={selectedOptions.includes('hobbies')} />
+                      <label htmlFor="hobbies" className="form-check-label">Hobbies</label>
+                    </div>  
+                  </div>
+                  {
+                    loadingApp && (
+                      <div className="mt-4 text-center">
+                        <div className="progress">
+                          <div className="progress-bar" role="progressbar" style={{ width: `${uploadProgress}%`, backgroundColor: '#007bff' }} aria-valuenow={uploadProgress} aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <p>Uploading File: {uploadedFileName}</p>
+                        <div className="mt-3">
+                          <Hourglass
+                            visible={true}
+                            height="80"
+                            width="80"
+                            ariaLabel="hourglass-loading"
+                            colors={['#000', '#444']}
+                          />
+                        </div>
+                      </div>
+                    )
+                  }
                 </div>
               </div>
             </div>
