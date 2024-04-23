@@ -15,18 +15,41 @@ import re
 import json 
 from django.db import connection
 import time
+from datetime import datetime, timedelta
+import pickle
+from rank_bm25 import BM25Okapi
+from nltk.stem import WordNetLemmatizer
+from bs4 import BeautifulSoup
+from nltk.tokenize import word_tokenize
+
+
+lemmatizer = WordNetLemmatizer()
 
 class UploadPDF(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, format=None):
-#        csv_file_path = os.path.join(os.path.dirname(__file__), '08-03-2023.csv')
 
         if not request.FILES.get('resume'):
             return JsonResponse({'error': 'No file attached'}, status=400)
 
         pdf_file = request.FILES['resume']
 
+        today = datetime.now().date()
+        date_list = []
+        for i in range(7):
+            date = today - timedelta(days=i)
+            date_list.append(date.strftime('%Y-%m-%d'))
+
+        folder_path = 'processed'
+        pickle_files = [file for file in os.listdir(folder_path) if file.endswith('.pkl') and file[:10] in date_list]
+        pickle_files = sorted(pickle_files, key=lambda x: datetime.strptime(x[:10], '%Y-%m-%d'), reverse=True)
+
+        merged_tokens = []
+        for file_name in pickle_files:
+            with open(os.path.join(folder_path, file_name), 'rb') as f:
+                bm25_object = pickle.load(f)
+                merged_tokens.extend(bm25_object)
         try:
             pdf_reader = PyPDF2.PdfReader(pdf_file)
             text = ''
@@ -35,64 +58,35 @@ class UploadPDF(APIView):
                 text += page.extract_text()
                 text += page.extract_text()
             text = text.replace("\n", " ")
-            print(text)
-            print("GPT")
             token_raw = self.llm_api_request(text)
-            print(token_raw)
-            print(token_raw["results"])
-            print(token_raw["results"][0])
-            print(token_raw["results"][0]["generated_text"])
             tokens_str = token_raw["results"][0]["generated_text"]
-            print("After")
             match = re.search(r'\{[^{}]+\}', tokens_str)
-            print(match)
             resume_string=""
             if match:
-                print("Test2")
                 json_data_str = match.group()
-                print("Test3")
-                print(json_data_str)
                 json_data = json.loads(json_data_str)
-                print(json_data)
                 for key, value in json_data.items():
-                    print(key)
-                    #resume_string += key + ": "
                     if value:
                         value_str = " ".join(value)
                         resume_string += value_str+" , "
             else:
                 print("JSON object not found in the provided string.")
                 return JsonResponse({'error': "Object not found in the provided string."}, status=400)
-            print("\n\n"+resume_string+"\n\n")
             with connection.cursor() as cursor:
-                cursor.execute("SELECT * FROM jobs")
+                sql_query = "SELECT * FROM jobs WHERE DATE(posted_on) IN ({}) ORDER BY posted_on DESC".format(', '.join(['%s'] * len(date_list)))
+                cursor.execute(sql_query, date_list)
                 jobdata = cursor.fetchall()
-                job_descriptions = [row[12] for row in jobdata]
-                
-                # Preprocess job descriptions
-                processed_job_descriptions = []
-                for desc in job_descriptions:
-                    processed_job_descriptions.append(desc)
-                
-                # Tokenize the processed job descriptions
-                tokenized_job_descriptions = [desc.split() for desc in processed_job_descriptions]
                 start_time = time.time()
-                # Create BM25 object
-                bm25 = BM25Okapi(tokenized_job_descriptions)
+                bm25 = BM25Okapi(merged_tokens)
                 end_time = time.time()
 
                 execution_time = end_time - start_time
 
                 print("BM25Okapi constructor took {:.2f} seconds to execute.".format(execution_time))
                 
-                # Tokenize user resume and remove stopwords, punctuations, and specified characters
-                processed_resume = self.preprocess_text(resume_string)
-                tokenized_resume = processed_resume.split()
-                print(tokenized_resume)
-                # Get BM25 scores
+                tokenized_resume = self.preprocess_text_pipeline(resume_string)
+                #tokenized_resume = processed_resume.split()
                 bm25_scores = bm25.get_scores(tokenized_resume)
-                print(bm25_scores)
-                # Get indices of top 10 scores
                 top10_indices = heapq.nlargest(10, range(len(bm25_scores)), key=bm25_scores.__getitem__)
                 
                 print(top10_indices)
@@ -146,3 +140,43 @@ class UploadPDF(APIView):
             return False
             # Handle exceptions if the request fails
             print(f"Request failed: {e}")
+    
+    def lowercase_text(self, text):
+        return text.lower()
+
+    def removeHTML(self, text):    
+        try:
+            soup = BeautifulSoup(text, "html.parser")
+            return soup.get_text()
+        except:
+            return text
+
+    def tokenize_text(self, text):   
+        return word_tokenize(text)
+
+    def remove_stopwords(self, tokens):
+        return [word for word in tokens if word not in stopwords.words('english')]
+
+    def remove_punctuations(self, tokens):  
+        pattern = re.compile(f'[{re.escape(string.punctuation)}]')
+        return [word for word in tokens if not pattern.search(word)]
+
+    def remove_blank_tokens(self, tokens):  
+        return [word for word in tokens if word.strip()]
+
+
+    def lemmatize_tokens(self, tokens):   
+        return [lemmatizer.lemmatize(word) for word in tokens]
+
+    def preprocess_text_pipeline(self, text):
+        if not isinstance(text, str):
+            return [] 
+
+        text = self.lowercase_text(text)
+        text = self.removeHTML(text)
+        tokens = self.tokenize_text(text)
+        tokens = self.remove_stopwords(tokens)
+        tokens = self.remove_punctuations(tokens)
+        tokens = self.remove_blank_tokens(tokens)
+        tokens = self.lemmatize_tokens(tokens)
+        return tokens
