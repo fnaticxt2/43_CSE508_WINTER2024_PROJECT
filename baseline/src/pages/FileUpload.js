@@ -3,7 +3,7 @@ import { useHistory } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { useDropzone } from 'react-dropzone'
 import { Hourglass } from 'react-loader-spinner';
-import backgroundImage from '../assets/images/download.jpg';
+//import backgroundImage from '../assets/images/download.jpg';
 
 const FileUpload = () => {
   const history = useHistory();
@@ -56,7 +56,7 @@ const FileUpload = () => {
 
   return (
     <>
-      <div className="background-container" style={{ backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover', minHeight: '100vh' }}>
+      <div className="background-container" style={{ backgroundSize: 'cover', minHeight: '100vh' }}>
         <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
           <div className="container-fluid text-center justify-content-center align-items-center" style={{ backgroundColor: '#f8f8f8' }}>
           <h3 className="navbar-brand text-center" to="/" style={{ animation: 'rainbow-text-animation 5s infinite' }}>

@@ -21,7 +21,7 @@ from rank_bm25 import BM25Okapi
 from nltk.stem import WordNetLemmatizer
 from bs4 import BeautifulSoup
 from nltk.tokenize import word_tokenize
-
+from llamaapi import LlamaAPI
 
 lemmatizer = WordNetLemmatizer()
 
@@ -59,9 +59,19 @@ class UploadPDF(APIView):
                 text += page.extract_text()
             text = text.replace("\n", " ")
             token_raw = self.llm_api_request(text)
-            tokens_str = token_raw["results"][0]["generated_text"]
-            match = re.search(r'\{[^{}]+\}', tokens_str)
+            print(token_raw)
+            tokens_str = token_raw["choices"][0]["message"]["content"]
+            print(tokens_str)
+            json_data = json.loads(tokens_str)
+            print(json_data)
+            #match = re.search(r'\{[^{}]+\}', tokens_str)
             resume_string=""
+            for key, value in json_data.items():
+                if value:
+                    value_str = " ".join(value)
+                    resume_string += value_str+" , "
+            print(resume_string)
+            """
             if match:
                 json_data_str = match.group()
                 json_data = json.loads(json_data_str)
@@ -72,6 +82,8 @@ class UploadPDF(APIView):
             else:
                 print("JSON object not found in the provided string.")
                 return JsonResponse({'error': "Object not found in the provided string."}, status=400)
+                
+            """
             with connection.cursor() as cursor:
                 sql_query = "SELECT * FROM jobs WHERE DATE(posted_on) IN ({}) ORDER BY posted_on DESC".format(', '.join(['%s'] * len(date_list)))
                 cursor.execute(sql_query, date_list)
@@ -104,7 +116,6 @@ class UploadPDF(APIView):
             return JsonResponse({'error': str(e)}, status=400)
 
     def preprocess_text(self, text):
-        # Remove stopwords, punctuations, and specified characters
         stop_words = set(stopwords.words('english'))
         punctuation_chars = set(string.punctuation)
         specified_chars = {'.', ';',':','-'," "}
@@ -112,6 +123,18 @@ class UploadPDF(APIView):
         return processed_text
   
     def llm_api_request(self, text):
+        llama = LlamaAPI('LL-oanhxM5VqtkyRqeSwAJnUbitkD0Psq6KPBy0VLsLATxm84d2KHU7tAjy5XtMzdVL')
+        api_request_json = {
+            "model": "llama3-70b",
+            "messages": [
+                {"role": "user", "content": text+" Extract skill tokens, form this resume text that should follow the format. 1) Atmost 20 and atleast 2 tokens for primary skills. 2) Atmost 8 tokens secondary skill. 3) Atmost 6 and atleast 1 educational background degree and college. 4) Atmost 6 latest sentences for past experience. 5) Atleast 2 and Atmost 5 soft skills. 6) Atmost 2 location token of candidate city. 7) Atmost 5 token for hobbies. 8) Atmost 4 tokens for explaining the users personality or uniqueness. Response Format: {'primary_skills': ['Token 1','Token 2',..],'secondary_skills': ['Token 3','Token 4',..],'latest_education': ['Token 5'], 'past_experience': ['Token 6',...],'soft_skills': ['Token 7',...],'location': ['Token 8',...],'hobbies': ['Token 9',...],  'personality_uniqueness': ['Token 10',...]}. Note: if the tokens do not exist then return None this should be returned in a non changeable json format for sake of uniformity, so any more resume text that i give should be returned in this format only. And most important Just send JSON data in response no other text. Just give JSON response in pain text no object and no other text"},
+            ]
+        }
+        response = llama.run(api_request_json)
+        return response.json()
+
+
+        """
         api_url = 'https://api.deepinfra.com/v1/inference/mistralai/Mixtral-8x7B-Instruct-v0.1'
         data = {
             "input": "[INST] "+text+" Extract skill tokens, form this resume text that should follow the format. 1) Atmost 20 and atleast 2 tokens for primary skills. 2) Atmost 8 tokens secondary skill. 3) Atmost 6 and atleast 1 educational background degree and college. 4) Atmost 6 latest sentences for past experience. 5) Atleast 2 and Atmost 5 soft skills. 6) Atmost 2 location token of candidate city. 7) Atmost 5 token for hobbies. 8) Atmost 4 tokens for explaining the users personality or uniqueness. Response Format: {'primary_skills': ['Token 1','Token 2',..],'secondary_skills': ['Token 3','Token 4',..],'latest_education': ['Token 5'], 'past_experience': ['Token 6',...],'soft_skills': ['Token 7',...],'location': ['Token 8',...],'hobbies': ['Token 9',...],  'personality_uniqueness': ['Token 10',...]}. Note: if the tokens do not exist then return None this should be returned in a non changeable json format for sake of uniformity, so any more resume text that i give should be returned in this format only. And most important Just send JSON data in response no other text. Just give JSON response in pain text no object and no other text [/INST] "
@@ -140,6 +163,7 @@ class UploadPDF(APIView):
             return False
             # Handle exceptions if the request fails
             print(f"Request failed: {e}")
+        """
     
     def lowercase_text(self, text):
         return text.lower()
