@@ -139,7 +139,7 @@ class UploadPDF(APIView):
                 start_time = time.time()
                 bm25_scores_list = {}
                 for pref_key, pref_val in final_resume_str.items():
-                    bm25_scores = bm25.get_scores(pref_val)
+                    bm25_scores = bm25.get_scores(self.preprocess_text_pipeline(pref_val))
                     """
                     multipler = prefrence_mapping[pref_key]
                     print(pref_key)
