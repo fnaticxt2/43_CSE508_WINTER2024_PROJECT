@@ -9,6 +9,18 @@ In today's job market, the vast number of daily job postings can overwhelm job s
 
 Either clone or download the repository, and then run the following commands in the terminal from the base folder:
 
+### Import Database:
+- Create database in MYSQL with name 'ir_job'
+- Import ir_job.sql in created database
+- In baseline\backend\jobfinder\jobfinder\settings.py edit DATABASE set:
+    * DATABASES = { 'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': '[Created database name]',
+        'USER': '[Your MYSQL username]',
+        'PASSWORD': '[Your MYSQL password]',
+        'HOST': '[Your MYSQL Host]',
+        'PORT': '3306', } }
+
 ### To run the Front-end:
 
 bash

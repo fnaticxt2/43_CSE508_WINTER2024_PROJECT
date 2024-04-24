@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Card, Button } from 'react-bootstrap'; // Import Bootstrap components for styling
 import backgroundImage from '../assets/images/job.jpg';
 
+
 const JobList = () => {
   const [jobs, setJobs] = useState([]);
   const location = useLocation();
@@ -10,44 +11,57 @@ const JobList = () => {
   useEffect(() => {
     if (location.state && location.state.jobdata) {
       const jobData = location.state.jobdata;
+      console.log(jobData);
       setJobs(jobData);
     }
   }, [location]);
-
+  function truncateStringUntilWord(str, word) {
+    var index = str.indexOf(word);
+    
+    if (index !== -1) {
+        return str.substring(index, str.length);
+    }
+    return str;
+  }
   return (
-    <div className="background-container" style={{ backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover'}}>
-      <div className="container mt-4">
-        <h2 className="text-center mb-4" style={{  color: '#fff', padding: '10px' }}>List of Jobs</h2>
-        <div className="row justify-content-center">
-          <div className="col-md-8">
-            {jobs.map((job) => {
-              const datetimeObj = new Date(job[9]);
-              const formattedDate = datetimeObj.toLocaleString("en-US", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: false,
-              });
+    <div className="container mt-4">
+      <h2 className="text-center mb-4">Jobs</h2>
+      <div className="row justify-content-center">
+        <div className="col-md-6">
+            
+        {jobs.map((job) => {
+          // Convert timestamp string to Date object
+          const datetimeObj = new Date(job[9]);
 
-              return (
-                <div key={job[0]} className="mb-4">
-                  <Card>
-                    <Card.Body>
-                      <Card.Title>{job[7] ? `${job[7]}, ` : ''} {job[8]}</Card.Title>
-                      <Card.Text>Experience: {job[1]}</Card.Text>
-                      <Card.Text>Salary: {job[2]}</Card.Text>
-                      <Card.Text>Location: {job[4]}</Card.Text>
-                      <Card.Text>Posted on: {formattedDate}</Card.Text>
-                      <Button variant="primary" href={job[3]} target="_blank" style={{ animation: 'rainbow-text-animation 5s infinite' }}>Apply</Button>
-                    </Card.Body>
-                  </Card>
-                </div>
-              );
-            })}
+          // Format the Date object
+          const formattedDate = datetimeObj.toLocaleString("en-US", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
+          });
+
+          return (
+
+          <div key={job[0]}>
+            
+          
+          <a href={job[3]} target='_BLANK' className="col-md-12 mb-3" style={{color:"#000",textDecoration:'none'}}>
+            <div className="card">
+              <div className="card-body">
+                <h5 className="card-title">{ job[7] ? ( <>{job[7]} ,</> ):( <></> )} {job[8]}</h5>
+                <p className="card-text" style={{textTransform:"capitalize"}}>{truncateStringUntilWord(job[6],"salary")}<br/>Posted on: {formattedDate}</p>
+              </div>
+            </div>
+          </a>
+          <br/>
           </div>
+          );
+        })}
+        
         </div>
       </div>
     </div>
